@@ -3,6 +3,8 @@ package environments
 import "os"
 
 func initializeDevEnvironmentVariables() {
+	// Server
+
 	// Database
 	os.Setenv("DB_HOST", "127.0.0.1")
 	os.Setenv("DB_PORT", "5432")
