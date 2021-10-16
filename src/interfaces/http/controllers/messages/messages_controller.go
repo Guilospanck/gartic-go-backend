@@ -1,7 +1,9 @@
 package messages
 
 import (
-	httpserver "base/src/infrastructure/http_server"
+	controllerbase "base/src/shared"
+	"encoding/json"
+	"log"
 	"net/http"
 )
 
@@ -14,11 +16,23 @@ type IMessagesController interface {
 }
 
 type messagesController struct {
-	httpserver.HttpResponseFactory
+	httpResponseFactory controllerbase.HttpResponseFactory
 }
 
 func (mc messagesController) Post(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("Ok"))
+
+	body := r.Body
+	headers := r.Header
+
+	response := mc.httpResponseFactory.Created(body, headers)
+
+	marshalledRes, err := json.Marshal(response)
+	if err != nil {
+		log.Fatal("Error")
+	}
+
+	w.WriteHeader(response.StatusCode)
+	w.Write([]byte(marshalledRes))
 }
 
 func (mc messagesController) Show(w http.ResponseWriter, r *http.Request) {
@@ -37,8 +51,8 @@ func (mc messagesController) Delete(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("delete"))
 }
 
-func NewMessagesController(responseFactory httpserver.HttpResponseFactory) IMessagesController {
+func NewMessagesController(httpResponseFactory controllerbase.HttpResponseFactory) IMessagesController {
 	return &messagesController{
-		HttpResponseFactory: responseFactory,
+		httpResponseFactory: httpResponseFactory,
 	}
 }
