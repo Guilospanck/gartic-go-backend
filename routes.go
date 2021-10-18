@@ -3,6 +3,8 @@ package main
 import (
 	"net/http"
 
+	usecases "base/src/applications/usecases/messages"
+	repositories "base/src/infrastructure/repositories/messages_repository"
 	"base/src/interfaces/http/controllers/messages"
 	controllerbase "base/src/shared"
 
@@ -19,7 +21,9 @@ func Routes() *http.Handler {
 	httpResponseFactory := controllerbase.NewHttpResponseFactory()
 
 	/* Messages routes */
-	messageController := messages.NewMessagesController(*httpResponseFactory)
+	messagesRepository := repositories.NewMessagesRepository()
+	messagesUseCases := usecases.NewMessageUseCase(messagesRepository)
+	messageController := messages.NewMessagesController(*httpResponseFactory, messagesUseCases)
 
 	subrouter.HandleFunc("/messages", messageController.Post).Methods(http.MethodPost)
 	subrouter.HandleFunc("/messages", messageController.Index).Methods(http.MethodGet)

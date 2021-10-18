@@ -2,6 +2,7 @@ package messages
 
 import (
 	"base/src/business/dtos"
+	usecases_interfaces "base/src/business/usecases"
 	controllerbase "base/src/shared"
 	"encoding/json"
 	"net/http"
@@ -17,6 +18,7 @@ type IMessagesController interface {
 
 type messagesController struct {
 	httpResponseFactory controllerbase.HttpResponseFactory
+	usecases            usecases_interfaces.IMessagesUseCases
 }
 
 func (mc messagesController) Post(w http.ResponseWriter, r *http.Request) {
@@ -24,13 +26,21 @@ func (mc messagesController) Post(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&createUserDTO)
 	if err != nil {
-		res := mc.httpResponseFactory.BadRequest(err.Error(), http.Header{})
+		res := mc.httpResponseFactory.BadRequest(err.Error(), nil)
 		w.WriteHeader(res.StatusCode)
 		json.NewEncoder(w).Encode(res)
 		return
 	}
 
-	response := mc.httpResponseFactory.Created(createUserDTO, http.Header{})
+	result, err := mc.usecases.CreateMessage(createUserDTO)
+	if err != nil {
+		res := mc.httpResponseFactory.BadRequest(err.Error(), nil)
+		w.WriteHeader(res.StatusCode)
+		json.NewEncoder(w).Encode(res)
+		return
+	}
+
+	response := mc.httpResponseFactory.Created(result, nil)
 
 	w.WriteHeader(response.StatusCode)
 	json.NewEncoder(w).Encode(response)
@@ -52,8 +62,9 @@ func (mc messagesController) Delete(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("delete"))
 }
 
-func NewMessagesController(httpResponseFactory controllerbase.HttpResponseFactory) IMessagesController {
+func NewMessagesController(httpResponseFactory controllerbase.HttpResponseFactory, messagesUsecase usecases_interfaces.IMessagesUseCases) IMessagesController {
 	return &messagesController{
 		httpResponseFactory: httpResponseFactory,
+		usecases:            messagesUsecase,
 	}
 }

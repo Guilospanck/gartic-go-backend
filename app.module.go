@@ -1,6 +1,7 @@
 package main
 
 import (
+	"base/src/infrastructure/database"
 	_ "base/src/infrastructure/environments"
 	httpserver "base/src/infrastructure/http_server"
 )
@@ -13,6 +14,9 @@ func (appModule *AppModule) InitServer() {
 	httpServer.Init()
 	httpServer.RegisterRoutes(Routes())
 	httpServer.Listen()
+
+	// CONNECT TO DATABASE
+	database.ConnectToDatabase()
 }
 
 func NewAppModule() *AppModule {
