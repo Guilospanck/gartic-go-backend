@@ -1,9 +1,9 @@
 package messages
 
 import (
+	"base/src/business/dtos"
 	controllerbase "base/src/shared"
 	"encoding/json"
-	"log"
 	"net/http"
 )
 
@@ -20,19 +20,20 @@ type messagesController struct {
 }
 
 func (mc messagesController) Post(w http.ResponseWriter, r *http.Request) {
+	createUserDTO := dtos.CreateMessageDTO{}
 
-	body := r.Body
-	headers := r.Header
-
-	response := mc.httpResponseFactory.Created(body, headers)
-
-	marshalledRes, err := json.Marshal(response)
+	err := json.NewDecoder(r.Body).Decode(&createUserDTO)
 	if err != nil {
-		log.Fatal("Error")
+		res := mc.httpResponseFactory.BadRequest(err.Error(), http.Header{})
+		w.WriteHeader(res.StatusCode)
+		json.NewEncoder(w).Encode(res)
+		return
 	}
 
+	response := mc.httpResponseFactory.Created(createUserDTO, http.Header{})
+
 	w.WriteHeader(response.StatusCode)
-	w.Write([]byte(marshalledRes))
+	json.NewEncoder(w).Encode(response)
 }
 
 func (mc messagesController) Show(w http.ResponseWriter, r *http.Request) {

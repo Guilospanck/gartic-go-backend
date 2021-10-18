@@ -8,8 +8,7 @@ import (
 type HttpResponseFactory struct{}
 
 type ErrorMessage struct {
-	StatusCode int    `json:"statusCode"`
-	Message    string `json:"message"`
+	Message string `json:"message"`
 }
 
 func (*HttpResponseFactory) Ok(body interface{}, headers http.Header) httpreqres.HttpResponse {
@@ -39,8 +38,7 @@ func (*HttpResponseFactory) BadRequest(msg string, headers http.Header) httpreqr
 	return httpreqres.HttpResponse{
 		StatusCode: 400,
 		Body: ErrorMessage{
-			StatusCode: 400,
-			Message:    msg,
+			Message: msg,
 		},
 		Headers: headers,
 	}
@@ -50,8 +48,7 @@ func (*HttpResponseFactory) Unauthorized(msg string, headers http.Header) httpre
 	return httpreqres.HttpResponse{
 		StatusCode: 401,
 		Body: ErrorMessage{
-			StatusCode: 401,
-			Message:    msg,
+			Message: msg,
 		},
 		Headers: headers,
 	}
@@ -61,8 +58,7 @@ func (*HttpResponseFactory) Forbidden(msg string, headers http.Header) httpreqre
 	return httpreqres.HttpResponse{
 		StatusCode: 403,
 		Body: ErrorMessage{
-			StatusCode: 403,
-			Message:    msg,
+			Message: msg,
 		},
 		Headers: headers,
 	}
@@ -72,8 +68,7 @@ func (*HttpResponseFactory) NotFound(msg string, headers http.Header) httpreqres
 	return httpreqres.HttpResponse{
 		StatusCode: 404,
 		Body: ErrorMessage{
-			StatusCode: 404,
-			Message:    msg,
+			Message: msg,
 		},
 		Headers: headers,
 	}
@@ -83,8 +78,7 @@ func (*HttpResponseFactory) Conflict(msg string, headers http.Header) httpreqres
 	return httpreqres.HttpResponse{
 		StatusCode: 409,
 		Body: ErrorMessage{
-			StatusCode: 409,
-			Message:    msg,
+			Message: msg,
 		},
 		Headers: headers,
 	}
@@ -94,8 +88,7 @@ func (*HttpResponseFactory) InternalServerError(msg string, headers http.Header)
 	return httpreqres.HttpResponse{
 		StatusCode: 500,
 		Body: ErrorMessage{
-			StatusCode: 500,
-			Message:    msg,
+			Message: msg,
 		},
 		Headers: headers,
 	}
