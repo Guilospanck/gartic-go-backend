@@ -6,9 +6,13 @@ import (
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+
+	_ "base/src/infrastructure/environments"
 )
 
-func ConnectToDatabase() *gorm.DB {
+var DB *gorm.DB
+
+func init() {
 	host := os.Getenv("DB_HOST")
 	username := os.Getenv("DB_USERNAME")
 	password := os.Getenv("DB_PASSWORD")
@@ -30,5 +34,6 @@ func ConnectToDatabase() *gorm.DB {
 	/* Migrate tables */
 	MigrateAllTables(db)
 
-	return db
+	DB = db
+
 }

@@ -10,8 +10,6 @@ import (
 type MessagesRepository struct{}
 
 func (MessagesRepository) Create(message dtos.CreateMessageDTO) (entities.Messages, error) {
-	db := database.ConnectToDatabase()
-
 	result := entities.Messages{
 		Username: message.Username,
 		Message:  message.Message,
@@ -19,7 +17,7 @@ func (MessagesRepository) Create(message dtos.CreateMessageDTO) (entities.Messag
 		Date:     message.Date,
 	}
 
-	if err := db.Model(entities.Messages{}).Create(&result).Error; err != nil {
+	if err := database.DB.Model(entities.Messages{}).Create(&result).Error; err != nil {
 		return entities.Messages{}, err
 	}
 
@@ -27,11 +25,9 @@ func (MessagesRepository) Create(message dtos.CreateMessageDTO) (entities.Messag
 }
 
 func (MessagesRepository) GetAllMessages() ([]entities.Messages, error) {
-	db := database.ConnectToDatabase()
-
 	result := []entities.Messages{}
 
-	if err := db.Find(&result).Error; err != nil {
+	if err := database.DB.Find(&result).Error; err != nil {
 		return []entities.Messages{}, err
 	}
 
