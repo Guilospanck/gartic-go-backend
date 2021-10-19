@@ -51,7 +51,18 @@ func (mc messagesController) Show(w http.ResponseWriter, r *http.Request) {
 }
 
 func (mc messagesController) Index(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("index"))
+	result, err := mc.usecases.GetAllMessages()
+	if err != nil {
+		res := mc.httpResponseFactory.InternalServerError(err.Error(), nil)
+		w.WriteHeader(res.StatusCode)
+		json.NewEncoder(w).Encode(res)
+		return
+	}
+
+	response := mc.httpResponseFactory.Ok(result, nil)
+
+	w.WriteHeader(response.StatusCode)
+	json.NewEncoder(w).Encode(response)
 }
 
 func (mc messagesController) Put(w http.ResponseWriter, r *http.Request) {

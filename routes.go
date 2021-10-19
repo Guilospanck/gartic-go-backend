@@ -3,7 +3,7 @@ package main
 import (
 	"net/http"
 
-	usecases "base/src/applications/usecases/messages"
+	messages_usecases "base/src/applications/usecases/messages"
 	"base/src/infrastructure/logger"
 	repositories "base/src/infrastructure/repositories/messages_repository"
 	"base/src/interfaces/http/controllers/messages"
@@ -31,7 +31,7 @@ func Routes() *http.Handler {
 
 	/* Messages routes */
 	messagesRepository := repositories.NewMessagesRepository()
-	messagesUseCases := usecases.NewMessageUseCase(messagesRepository)
+	messagesUseCases := messages_usecases.NewMessageUseCase(messagesRepository)
 	messageController := messages.NewMessagesController(*httpResponseFactory, messagesUseCases)
 
 	subrouter.HandleFunc("/messages", messageController.Post).Methods(http.MethodPost)

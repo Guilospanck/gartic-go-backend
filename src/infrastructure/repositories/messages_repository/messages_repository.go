@@ -26,6 +26,18 @@ func (MessagesRepository) Create(message dtos.CreateMessageDTO) (entities.Messag
 	return result, nil
 }
 
+func (MessagesRepository) GetAllMessages() ([]entities.Messages, error) {
+	db := database.ConnectToDatabase()
+
+	result := []entities.Messages{}
+
+	if err := db.Find(&result).Error; err != nil {
+		return []entities.Messages{}, err
+	}
+
+	return result, nil
+}
+
 func NewMessagesRepository() repository_interfaces.IMessagesRepository {
 	return MessagesRepository{}
 }

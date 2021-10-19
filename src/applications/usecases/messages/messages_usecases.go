@@ -1,4 +1,4 @@
-package usecases
+package messages_usecases
 
 import (
 	repository_interfaces "base/src/applications/interfaces"
@@ -13,12 +13,11 @@ type MessageUseCase struct {
 }
 
 func (muc MessageUseCase) CreateMessage(createMessageDTO dtos.CreateMessageDTO) (entities.Messages, errors.BaseError) {
-	message, err := muc.repository.Create(createMessageDTO)
-	if err != nil {
-		return entities.Messages{}, err
-	}
+	return muc.repository.Create(createMessageDTO)
+}
 
-	return message, nil
+func (muc MessageUseCase) GetAllMessages() ([]entities.Messages, errors.BaseError) {
+	return muc.repository.GetAllMessages()
 }
 
 func NewMessageUseCase(repo repository_interfaces.IMessagesRepository) usecases_interfaces.IMessagesUseCases {
