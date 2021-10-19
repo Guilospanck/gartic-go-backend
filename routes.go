@@ -4,8 +4,10 @@ import (
 	"net/http"
 
 	usecases "base/src/applications/usecases/messages"
+	"base/src/infrastructure/logger"
 	repositories "base/src/infrastructure/repositories/messages_repository"
 	"base/src/interfaces/http/controllers/messages"
+	"base/src/interfaces/http/middlewares"
 	controllerbase "base/src/shared"
 
 	"github.com/gorilla/mux"
@@ -16,6 +18,13 @@ func Routes() *http.Handler {
 
 	router := mux.NewRouter()
 	subrouter := router.Host("localhost:8000").PathPrefix("/api/v1").Subrouter()
+
+	/* Logger */
+	logger := logger.NewLogger()
+
+	/* Middlewares */
+	loggingMiddleware := middlewares.NewLoggingMiddleware(logger)
+	subrouter.Use(loggingMiddleware.LoggingMiddleware)
 
 	/* Response Factory */
 	httpResponseFactory := controllerbase.NewHttpResponseFactory()
