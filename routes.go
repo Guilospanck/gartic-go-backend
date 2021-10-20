@@ -36,6 +36,7 @@ func Routes() *http.Handler {
 
 	subrouter.HandleFunc("/messages", messageController.Post).Methods(http.MethodPost)
 	subrouter.HandleFunc("/messages", messageController.Index).Methods(http.MethodGet)
+	subrouter.HandleFunc("/messages/getbyroom/{room}", messageController.GetByRoom).Methods(http.MethodGet)
 	subrouter.HandleFunc("/messages/{id:[0-9]+}", messageController.Show).Methods(http.MethodGet)
 	subrouter.HandleFunc("/messages/{id:[0-9]+}", messageController.Put).Methods(http.MethodPut)
 	subrouter.HandleFunc("/messages/{id:[0-9]+}", messageController.Delete).Methods(http.MethodDelete)

@@ -34,6 +34,17 @@ func (MessagesRepository) GetAllMessages() ([]entities.Messages, error) {
 	return result, nil
 }
 
+func (MessagesRepository) GetMessagesByRoom(room string) ([]entities.Messages, error) {
+	result := []entities.Messages{}
+
+	query := database.DB.Where("room = ?", room).Find(&result)
+	if query.Error != nil {
+		return []entities.Messages{}, nil
+	}
+
+	return result, nil
+}
+
 func NewMessagesRepository() repository_interfaces.IMessagesRepository {
 	return MessagesRepository{}
 }

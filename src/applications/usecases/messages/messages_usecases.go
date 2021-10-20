@@ -20,6 +20,10 @@ func (muc MessageUseCase) GetAllMessages() ([]entities.Messages, errors.BaseErro
 	return muc.repository.GetAllMessages()
 }
 
+func (muc MessageUseCase) GetMessagesByRoom(room string) ([]entities.Messages, errors.BaseError) {
+	return muc.repository.GetMessagesByRoom(room)
+}
+
 func NewMessageUseCase(repo repository_interfaces.IMessagesRepository) usecases_interfaces.IMessagesUseCases {
 	return MessageUseCase{
 		repository: repo,

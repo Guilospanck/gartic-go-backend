@@ -6,11 +6,14 @@ import (
 	controllerbase "base/src/shared"
 	"encoding/json"
 	"net/http"
+
+	"github.com/gorilla/mux"
 )
 
 type IMessagesController interface {
 	Post(w http.ResponseWriter, r *http.Request)
 	Show(w http.ResponseWriter, r *http.Request)
+	GetByRoom(w http.ResponseWriter, r *http.Request)
 	Index(w http.ResponseWriter, r *http.Request)
 	Put(w http.ResponseWriter, r *http.Request)
 	Delete(w http.ResponseWriter, r *http.Request)
@@ -48,6 +51,24 @@ func (mc messagesController) Post(w http.ResponseWriter, r *http.Request) {
 
 func (mc messagesController) Show(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("show"))
+}
+
+func (mc messagesController) GetByRoom(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	room := vars["room"]
+
+	result, err := mc.usecases.GetMessagesByRoom(room)
+	if err != nil {
+		res := mc.httpResponseFactory.InternalServerError(err.Error(), nil)
+		w.WriteHeader(res.StatusCode)
+		json.NewEncoder(w).Encode(res)
+		return
+	}
+
+	response := mc.httpResponseFactory.Ok(result, nil)
+
+	w.WriteHeader(response.StatusCode)
+	json.NewEncoder(w).Encode(response)
 }
 
 func (mc messagesController) Index(w http.ResponseWriter, r *http.Request) {
