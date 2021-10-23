@@ -12,7 +12,7 @@ func (hub *ConnHub) Run() {
 		select {
 		// Register client to hub
 		case client := <-hub.register:
-			hub.clients[client] = client.username
+			hub.clients[client] = client.username + "/" + client.room
 		// Unregister client to hub
 		case client := <-hub.unregister:
 			if _, ok := hub.clients[client]; ok {

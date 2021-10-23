@@ -3,6 +3,7 @@ package websocketserver
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -20,9 +21,14 @@ const (
 	maxMessageSize = 512
 )
 
+var upgrader = websocket.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+	// needed to allow connections from any origin for :3000 -> :5555
+	CheckOrigin: func(r *http.Request) bool { return true },
+}
+
 type WebSocketServer struct {
-	httpport uint
-	upgrader websocket.Upgrader
 }
 
 type JsonData struct {
@@ -34,6 +40,7 @@ type JsonData struct {
 
 type Client struct {
 	username string
+	room     string
 	hub      *ConnHub
 	conn     *websocket.Conn
 	send     chan []byte
@@ -60,7 +67,10 @@ func (c *Client) ReadPump() {
 		// read JSON data from connection
 		message := JsonData{}
 		if err := c.conn.ReadJSON(&message); err != nil {
-			fmt.Println("Error reading JSON", err)
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+				log.Printf("error: %v", err)
+			}
+			break
 		}
 		fmt.Printf("Got response %#v\n", message)
 
@@ -83,6 +93,7 @@ func (c *Client) WritePump() {
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				// channel has been closed by the hub
+				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
 
@@ -92,7 +103,7 @@ func (c *Client) WritePump() {
 			}
 			w.Write(message)
 
-			// coalesce pending messages into one message
+			// Add queued chat messages to the current websocket message.
 			n := len(c.send)
 			for i := 0; i < n; i++ {
 				w.Write(<-c.send)
@@ -110,18 +121,39 @@ func (c *Client) WritePump() {
 			}
 		}
 	}
-
-}
-
-func (ws WebSocketServer) InitWebSocket() {
-	ws.upgrader = websocket.Upgrader{
-		ReadBufferSize:  1024,
-		WriteBufferSize: 1024,
-		CheckOrigin:     func(r *http.Request) bool { return true },
-	}
 }
 
 func (ws WebSocketServer) WsHandler(hub *ConnHub, w http.ResponseWriter, r *http.Request) {
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		http.Error(w, "Could not open websocket connection", http.StatusBadRequest)
+	}
+
+	// init new client, register to hub
+	username := r.URL.Query().Get("username")
+	room := r.URL.Query().Get("room")
+	client := &Client{
+		username: username,
+		room:     room,
+		conn:     conn,
+		hub:      hub,
+		send:     make(chan []byte, 256),
+	}
+	client.hub.register <- client
+
+	// construct json list of connected client usernames and send to new client for display
+	usernames := make([]string, len(client.hub.clients)+1)
+	i := 0
+	for k := range client.hub.clients {
+		usernames[i] = client.hub.clients[k]
+		i++
+	}
+	usernames[i] = username
+	usernamesJson, _ := json.Marshal(usernames)
+	client.hub.broadcast <- usernamesJson
+
+	go client.WritePump()
+	go client.ReadPump()
 
 }
 

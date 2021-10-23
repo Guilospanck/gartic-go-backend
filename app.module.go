@@ -20,11 +20,10 @@ func (appModule *AppModule) InitServer() {
 	// ========== WEB SOCKET ============
 	// Start Hub
 	hub := websocketserver.NewConnHub()
-	hub.Run()
+	go hub.Run()
 
 	// Websocket Server (and its own http server)
 	webSocketServer := websocketserver.NewWebSocketServer()
-	webSocketServer.InitWebSocket()
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		webSocketServer.WsHandler(hub, w, r)
 	})
