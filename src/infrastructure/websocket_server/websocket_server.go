@@ -132,9 +132,11 @@ func (ws WebSocketServer) WsHandler(hub *ConnHub, w http.ResponseWriter, r *http
 		http.Error(w, "Could not open websocket connection", http.StatusBadRequest)
 	}
 
+	queries := r.URL.Query()
+
 	// init new client, register to hub
-	username := r.URL.Query().Get("username")
-	room := r.URL.Query().Get("room")
+	username := queries.Get("username")
+	room := queries.Get("room")
 
 	client := &Client{
 		username: username,
