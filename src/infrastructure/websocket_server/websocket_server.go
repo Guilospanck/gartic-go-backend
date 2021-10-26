@@ -43,7 +43,7 @@ type Client struct {
 	room     string
 	hub      *ConnHub
 	conn     *websocket.Conn
-	send     chan []byte
+	send     chan JsonData
 }
 
 func (c *Client) ReadPump() {
@@ -74,9 +74,8 @@ func (c *Client) ReadPump() {
 		}
 		fmt.Printf("Got response %#v\n", message)
 
-		messageJson, _ := json.Marshal(message)
 		// queue messge for writing
-		c.hub.broadcast <- messageJson
+		c.hub.send <- message
 	}
 }
 
@@ -88,6 +87,7 @@ func (c *Client) WritePump() {
 	}()
 
 	for {
+		fmt.Println("Sent")
 		select {
 		case message, ok := <-c.send:
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
@@ -101,12 +101,15 @@ func (c *Client) WritePump() {
 			if err != nil {
 				return
 			}
-			w.Write(message)
+
+			messageJson, _ := json.Marshal(message)
+			w.Write(messageJson)
 
 			// Add queued chat messages to the current websocket message.
 			n := len(c.send)
 			for i := 0; i < n; i++ {
-				w.Write(<-c.send)
+				messageJson, _ := json.Marshal(<-c.send)
+				w.Write(messageJson)
 			}
 
 			if err := w.Close(); err != nil {
@@ -132,25 +135,15 @@ func (ws WebSocketServer) WsHandler(hub *ConnHub, w http.ResponseWriter, r *http
 	// init new client, register to hub
 	username := r.URL.Query().Get("username")
 	room := r.URL.Query().Get("room")
+
 	client := &Client{
 		username: username,
 		room:     room,
 		conn:     conn,
 		hub:      hub,
-		send:     make(chan []byte, 256),
+		send:     make(chan JsonData, 256),
 	}
 	client.hub.register <- client
-
-	// construct json list of connected client usernames and send to new client for display
-	usernames := make([]string, len(client.hub.clients)+1)
-	i := 0
-	for k := range client.hub.clients {
-		usernames[i] = client.hub.clients[k]
-		i++
-	}
-	usernames[i] = username
-	usernamesJson, _ := json.Marshal(usernames)
-	client.hub.broadcast <- usernamesJson
 
 	go client.WritePump()
 	go client.ReadPump()
