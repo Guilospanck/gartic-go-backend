@@ -39,34 +39,61 @@ type JsonData struct {
 }
 
 type Client struct {
-	username string
-	room     string
-	hub      *ConnHub
-	conn     *websocket.Conn
-	send     chan JsonData
+	Username string           `json:"username"`
+	Room     string           `json:"room"`
+	Hub      *ConnHub         `json:"hub"`
+	Conn     *websocket.Conn  `json:"conn"`
+	Send     chan interface{} `json:"send"`
+}
+
+type RoomAndParticipants struct {
+	Room         string   `json:"room"`
+	Participants []string `json:"participants"`
+}
+
+func (client *Client) sendDataToWaitingRoom() {
+	fmt.Println("Sending to waiting room...")
+
+	roomsWithParticipants := []RoomAndParticipants{}
+
+	for key, value := range client.Hub.clients {
+		participants := []string{}
+		for _, v := range value {
+			participants = append(participants, v.Username)
+		}
+
+		temp := RoomAndParticipants{
+			Room:         key,
+			Participants: participants,
+		}
+		roomsWithParticipants = append(roomsWithParticipants, temp)
+	}
+	fmt.Println("Participants:")
+	fmt.Println(roomsWithParticipants)
+	client.Hub.sendToWaitingRoom <- roomsWithParticipants
 }
 
 func (c *Client) ReadPump() {
+	fmt.Println("listening...")
 	// schedule client to be disconnected
 	defer func() {
-		c.hub.unregister <- c
-		c.conn.Close()
+		c.Hub.unregister <- c
+		c.Conn.Close()
 	}()
 
 	// init Client connection
-	c.conn.SetReadLimit(maxMessageSize)
-	c.conn.SetReadDeadline(time.Now().Add(pongWait))
-	c.conn.SetPongHandler(func(appData string) error {
-		c.conn.SetReadDeadline(time.Now().Add(pongWait))
+	c.Conn.SetReadLimit(maxMessageSize)
+	c.Conn.SetReadDeadline(time.Now().Add(pongWait))
+	c.Conn.SetPongHandler(func(appData string) error {
+		c.Conn.SetReadDeadline(time.Now().Add(pongWait))
 		return nil
 	})
 
 	// handle connection read
 	for {
-		fmt.Println("reading from client")
 		// read JSON data from connection
 		message := JsonData{}
-		if err := c.conn.ReadJSON(&message); err != nil {
+		if err := c.Conn.ReadJSON(&message); err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("error: %v", err)
 			}
@@ -75,40 +102,44 @@ func (c *Client) ReadPump() {
 		fmt.Printf("Got response %#v\n", message)
 
 		// queue messge for writing
-		c.hub.send <- message
+		c.Hub.send <- message
 	}
 }
 
 func (c *Client) WritePump() {
+	fmt.Println("writing...")
+
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
-		c.conn.Close()
+		c.Conn.Close()
 	}()
 
 	for {
-		fmt.Println("Sent")
 		select {
-		case message, ok := <-c.send:
-			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+		case message, ok := <-c.Send:
+			fmt.Println("message")
+			fmt.Println(message)
+			c.Conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				// channel has been closed by the hub
-				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
 
-			w, err := c.conn.NextWriter(websocket.TextMessage)
+			w, err := c.Conn.NextWriter(websocket.TextMessage)
 			if err != nil {
 				return
 			}
 
 			messageJson, _ := json.Marshal(message)
+			fmt.Println("Sent")
 			w.Write(messageJson)
 
 			// Add queued chat messages to the current websocket message.
-			n := len(c.send)
+			n := len(c.Send)
 			for i := 0; i < n; i++ {
-				messageJson, _ := json.Marshal(<-c.send)
+				messageJson, _ := json.Marshal(<-c.Send)
 				w.Write(messageJson)
 			}
 
@@ -118,8 +149,8 @@ func (c *Client) WritePump() {
 
 		// send ping over websocket
 		case <-ticker.C:
-			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
-			if err := c.conn.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
+			c.Conn.SetWriteDeadline(time.Now().Add(writeWait))
+			if err := c.Conn.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
 				return
 			}
 		}
@@ -139,16 +170,32 @@ func (ws WebSocketServer) WsHandler(hub *ConnHub, w http.ResponseWriter, r *http
 	room := queries.Get("room")
 
 	client := &Client{
-		username: username,
-		room:     room,
-		conn:     conn,
-		hub:      hub,
-		send:     make(chan JsonData, 256),
+		Username: username,
+		Room:     room,
+		Conn:     conn,
+		Hub:      hub,
+		Send:     make(chan interface{}, 512),
 	}
-	client.hub.register <- client
 
-	go client.WritePump()
-	go client.ReadPump()
+	client.Hub.register <- client
+	gotoReadPump := make(chan int, 1)
+	gotoSendDataToWaitingRoom := make(chan int, 1)
+
+	go func() {
+		go client.WritePump()
+		gotoReadPump <- 1
+	}()
+
+	go func() {
+		<-gotoReadPump
+		go client.ReadPump()
+		gotoSendDataToWaitingRoom <- 1
+	}()
+
+	go func() {
+		<-gotoSendDataToWaitingRoom
+		go client.sendDataToWaitingRoom()
+	}()
 
 }
 
