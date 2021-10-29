@@ -1,5 +1,7 @@
 package websocketserver
 
+import "fmt"
+
 type ConnHub struct {
 	clients           map[string][]*Client
 	send              chan JsonData
@@ -28,7 +30,7 @@ func (hub *ConnHub) removeClientFromRoomList(room string, client *Client) {
 	}
 
 	if indexOfElement == lengthOfClientsSlice-1 { // last element
-		clientsFromRoom = clientsFromRoom[:lengthOfClientsSlice]
+		clientsFromRoom = clientsFromRoom[:lengthOfClientsSlice-1]
 	} else {
 		firstSlice := clientsFromRoom[:indexOfElement]
 		secondSlice := clientsFromRoom[indexOfElement+1 : lengthOfClientsSlice]
@@ -109,6 +111,7 @@ func (hub *ConnHub) Run() {
 			id := "waitingroomgarticlikeapp"
 			for range hub.clients {
 				if clients, ok := hub.clients[id]; ok {
+					fmt.Println(clients)
 					for _, client := range clients {
 						select {
 						case client.Send <- message:

@@ -104,7 +104,8 @@ func (c *Client) ReadPump() {
 
 		// Verify if is to close the channel (will be closed by defer)
 		if message.Close {
-			break
+			fmt.Println("Aqui")
+			return
 		}
 
 		// queue messge for writing
@@ -115,15 +116,13 @@ func (c *Client) ReadPump() {
 func (c *Client) WritePump() {
 	fmt.Println("writing...")
 
-	if c.Room == "waitingroomgarticlikeapp" {
-		c.sendDataToWaitingRoom()
-	}
-
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
 		c.Conn.Close()
 	}()
+
+	c.sendDataToWaitingRoom()
 
 	for {
 		select {
@@ -187,25 +186,9 @@ func (ws WebSocketServer) WsHandler(hub *ConnHub, w http.ResponseWriter, r *http
 	}
 
 	client.Hub.register <- client
-	gotoReadPump := make(chan int, 1)
-	gotoSendDataToWaitingRoom := make(chan int, 1)
 
-	go func() {
-		go client.WritePump()
-		gotoReadPump <- 1
-	}()
-
-	go func() {
-		<-gotoReadPump
-		go client.ReadPump()
-		gotoSendDataToWaitingRoom <- 1
-	}()
-
-	go func() {
-		<-gotoSendDataToWaitingRoom
-		// go client.sendDataToWaitingRoom()
-	}()
-
+	go client.WritePump()
+	go client.ReadPump()
 }
 
 func NewWebSocketServer() *WebSocketServer {
