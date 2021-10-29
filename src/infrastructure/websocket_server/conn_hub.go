@@ -1,7 +1,5 @@
 package websocketserver
 
-import "fmt"
-
 type ConnHub struct {
 	clients           map[string][]*Client
 	send              chan JsonData
@@ -96,13 +94,11 @@ func (hub *ConnHub) Run() {
 		// Loop through registered clients and send message to their send channel
 		case message := <-hub.send:
 			id := message.Room
-			for range hub.clients {
-				if clients, ok := hub.clients[id]; ok {
-					for _, client := range clients {
-						select {
-						case client.Send <- message:
-						default:
-						}
+			if clients, ok := hub.clients[id]; ok {
+				for _, client := range clients {
+					select {
+					case client.Send <- message:
+					default:
 					}
 				}
 			}
@@ -111,7 +107,6 @@ func (hub *ConnHub) Run() {
 			id := "waitingroomgarticlikeapp"
 			for range hub.clients {
 				if clients, ok := hub.clients[id]; ok {
-					fmt.Println(clients)
 					for _, client := range clients {
 						select {
 						case client.Send <- message:

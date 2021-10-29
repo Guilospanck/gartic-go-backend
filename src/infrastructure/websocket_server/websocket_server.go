@@ -104,7 +104,6 @@ func (c *Client) ReadPump() {
 
 		// Verify if is to close the channel (will be closed by defer)
 		if message.Close {
-			fmt.Println("Aqui")
 			return
 		}
 
