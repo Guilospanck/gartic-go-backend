@@ -39,8 +39,41 @@ func (hub *ConnHub) removeClientFromRoomList(room string, client *Client) {
 	}
 
 	hub.clients[room] = clientsFromRoom
-
 }
+
+// func (hub *ConnHub) removeClientFromAllRooms(cl *Client) {
+
+// 	roomArray := []string{}
+// 	indexClientArray := []int{}
+
+// 	for room, clients := range hub.clients {
+// 		for index, client := range clients {
+// 			if client == cl {
+// 				roomArray = append(roomArray, room)
+// 				indexClientArray = append(indexClientArray, index)
+// 			}
+// 		}
+// 	}
+
+// 	// remove clients from rooms
+// 	for index, room := range roomArray {
+// 		clientArray := hub.clients[room]
+// 		indexToRemove := indexClientArray[index]
+
+// 		newClientArray := []*Client{}
+
+// 		if indexToRemove == len(hub.clients[room])-1 {
+// 			newClientArray = clientArray[:indexToRemove]
+// 		} else {
+// 			firstArray := clientArray[:indexToRemove]
+// 			secondArray := clientArray[indexToRemove+1:]
+// 			newClientArray = append(newClientArray, firstArray...)
+// 			newClientArray = append(newClientArray, secondArray...)
+// 		}
+
+// 		hub.clients[room] = newClientArray
+// 	}
+// }
 
 func (hub *ConnHub) Run() {
 	for {
@@ -49,11 +82,6 @@ func (hub *ConnHub) Run() {
 		case client := <-hub.register:
 			id := client.Room
 			hub.clients[id] = append(hub.clients[id], client)
-
-			// clean waiting room client
-			if id != "waitingroomgarticlikeapp" {
-				hub.removeClientFromRoomList("waitingroomgarticlikeapp", client)
-			}
 
 		// Unregister client to hub
 		case client := <-hub.unregister:
@@ -71,10 +99,7 @@ func (hub *ConnHub) Run() {
 					for _, client := range clients {
 						select {
 						case client.Send <- message:
-						// If send buffer is full, assume client is dead or stuck and unregister
 						default:
-							close(client.Send)
-							hub.removeClientFromRoomList(id, client)
 						}
 					}
 				}
@@ -87,10 +112,7 @@ func (hub *ConnHub) Run() {
 					for _, client := range clients {
 						select {
 						case client.Send <- message:
-						// If send buffer is full, assume client is dead or stuck and unregister
 						default:
-							close(client.Send)
-							hub.removeClientFromRoomList(id, client)
 						}
 					}
 				}

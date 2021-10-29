@@ -36,6 +36,7 @@ type JsonData struct {
 	Room      string `json:"room"`
 	Message   string `json:"message"`
 	Timestamp string `json:"timestamp"`
+	Close     bool   `json:"close"`
 }
 
 type Client struct {
@@ -68,15 +69,15 @@ func (client *Client) sendDataToWaitingRoom() {
 		}
 		roomsWithParticipants = append(roomsWithParticipants, temp)
 	}
-	fmt.Println("Participants:")
-	fmt.Println(roomsWithParticipants)
 	client.Hub.sendToWaitingRoom <- roomsWithParticipants
 }
 
 func (c *Client) ReadPump() {
 	fmt.Println("listening...")
+
 	// schedule client to be disconnected
 	defer func() {
+		fmt.Println("Read Pump: defer func")
 		c.Hub.unregister <- c
 		c.Conn.Close()
 	}()
@@ -101,6 +102,11 @@ func (c *Client) ReadPump() {
 		}
 		fmt.Printf("Got response %#v\n", message)
 
+		// Verify if is to close the channel (will be closed by defer)
+		if message.Close {
+			break
+		}
+
 		// queue messge for writing
 		c.Hub.send <- message
 	}
@@ -108,6 +114,10 @@ func (c *Client) ReadPump() {
 
 func (c *Client) WritePump() {
 	fmt.Println("writing...")
+
+	if c.Room == "waitingroomgarticlikeapp" {
+		c.sendDataToWaitingRoom()
+	}
 
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
@@ -118,12 +128,11 @@ func (c *Client) WritePump() {
 	for {
 		select {
 		case message, ok := <-c.Send:
-			fmt.Println("message")
-			fmt.Println(message)
 			c.Conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				// channel has been closed by the hub
 				c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
+				fmt.Println("Write pump not ok")
 				return
 			}
 
@@ -137,11 +146,11 @@ func (c *Client) WritePump() {
 			w.Write(messageJson)
 
 			// Add queued chat messages to the current websocket message.
-			n := len(c.Send)
-			for i := 0; i < n; i++ {
-				messageJson, _ := json.Marshal(<-c.Send)
-				w.Write(messageJson)
-			}
+			// n := len(c.Send)
+			// for i := 0; i < n; i++ {
+			// 	messageJson, _ := json.Marshal(<-c.Send)
+			// 	w.Write(messageJson)
+			// }
 
 			if err := w.Close(); err != nil {
 				return
@@ -194,7 +203,7 @@ func (ws WebSocketServer) WsHandler(hub *ConnHub, w http.ResponseWriter, r *http
 
 	go func() {
 		<-gotoSendDataToWaitingRoom
-		go client.sendDataToWaitingRoom()
+		// go client.sendDataToWaitingRoom()
 	}()
 
 }
