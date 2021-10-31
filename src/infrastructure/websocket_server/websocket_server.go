@@ -32,11 +32,12 @@ type WebSocketServer struct {
 }
 
 type JsonData struct {
-	Username  string `json:"username"`
-	Room      string `json:"room"`
-	Message   string `json:"message"`
-	Timestamp string `json:"timestamp"`
-	Close     bool   `json:"close"`
+	Username          string `json:"username"`
+	Room              string `json:"room"`
+	Message           string `json:"message"`
+	Timestamp         string `json:"timestamp"`
+	Close             bool   `json:"close"`
+	CanvasCoordinates string `json:"canvasCoordinates"`
 }
 
 type Client struct {
@@ -83,7 +84,7 @@ func (c *Client) ReadPump() {
 	}()
 
 	// init Client connection
-	c.Conn.SetReadLimit(maxMessageSize)
+	// c.Conn.SetReadLimit(maxMessageSize)
 	c.Conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.Conn.SetPongHandler(func(appData string) error {
 		c.Conn.SetReadDeadline(time.Now().Add(pongWait))
