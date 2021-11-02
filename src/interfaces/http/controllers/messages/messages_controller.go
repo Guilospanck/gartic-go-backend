@@ -17,6 +17,7 @@ type IMessagesController interface {
 	Index(w http.ResponseWriter, r *http.Request)
 	Put(w http.ResponseWriter, r *http.Request)
 	Delete(w http.ResponseWriter, r *http.Request)
+	DeleteByRoom(w http.ResponseWriter, r *http.Request)
 }
 
 type messagesController struct {
@@ -92,6 +93,19 @@ func (mc messagesController) Put(w http.ResponseWriter, r *http.Request) {
 
 func (mc messagesController) Delete(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("delete"))
+}
+
+func (mc messagesController) DeleteByRoom(w http.ResponseWriter, r *http.Request) {
+	room := r.Header.Get("room")
+
+	err := mc.usecases.DeleteAllMessagesFromRoom(room)
+	if err != nil {
+		res := mc.httpResponseFactory.InternalServerError(err.Error(), nil)
+		w.WriteHeader(res.StatusCode)
+		return
+	}
+
+	w.Write([]byte("OK"))
 }
 
 func NewMessagesController(httpResponseFactory controllerbase.HttpResponseFactory, messagesUsecase usecases_interfaces.IMessagesUseCases) IMessagesController {

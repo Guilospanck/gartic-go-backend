@@ -40,6 +40,7 @@ func Routes() *http.Handler {
 	subrouter.HandleFunc("/messages/{id:[0-9]+}", messageController.Show).Methods(http.MethodGet)
 	subrouter.HandleFunc("/messages/{id:[0-9]+}", messageController.Put).Methods(http.MethodPut)
 	subrouter.HandleFunc("/messages/{id:[0-9]+}", messageController.Delete).Methods(http.MethodDelete)
+	subrouter.HandleFunc("/messages/deletebyroom", messageController.DeleteByRoom).Methods(http.MethodDelete)
 
 	handler := cors.Default().Handler(subrouter)
 

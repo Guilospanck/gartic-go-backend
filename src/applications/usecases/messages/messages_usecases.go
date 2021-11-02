@@ -24,6 +24,10 @@ func (muc MessageUseCase) GetMessagesByRoom(room string) ([]entities.Messages, e
 	return muc.repository.GetMessagesByRoom(room)
 }
 
+func (muc MessageUseCase) DeleteAllMessagesFromRoom(room string) errors.BaseError {
+	return muc.repository.DeleteAllMessagesFromRoom(room)
+}
+
 func NewMessageUseCase(repo repository_interfaces.IMessagesRepository) usecases_interfaces.IMessagesUseCases {
 	return MessageUseCase{
 		repository: repo,

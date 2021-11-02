@@ -1,8 +1,10 @@
 package main
 
 import (
+	messages_usecases "base/src/applications/usecases/messages"
 	_ "base/src/infrastructure/database"
 	httpserver "base/src/infrastructure/http_server"
+	repositories "base/src/infrastructure/repositories/messages_repository"
 	websocketserver "base/src/infrastructure/websocket_server"
 	"log"
 	"net/http"
@@ -23,7 +25,10 @@ func (appModule *AppModule) InitServer() {
 	go hub.Run()
 
 	// Websocket Server (and its own http server)
-	webSocketServer := websocketserver.NewWebSocketServer()
+	messagesRepository := repositories.NewMessagesRepository()
+	messagesUseCases := messages_usecases.NewMessageUseCase(messagesRepository)
+
+	webSocketServer := websocketserver.NewWebSocketServer(messagesUseCases)
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		webSocketServer.WsHandler(hub, w, r)
 	})

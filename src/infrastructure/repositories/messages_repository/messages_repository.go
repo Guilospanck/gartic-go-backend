@@ -37,12 +37,23 @@ func (MessagesRepository) GetAllMessages() ([]entities.Messages, error) {
 func (MessagesRepository) GetMessagesByRoom(room string) ([]entities.Messages, error) {
 	result := []entities.Messages{}
 
-	query := database.DB.Where("room = ?", room).Find(&result)
+	query := database.DB.Order("date asc").Where("room = ?", room).Find(&result)
 	if query.Error != nil {
 		return []entities.Messages{}, nil
 	}
 
 	return result, nil
+}
+
+func (MessagesRepository) DeleteAllMessagesFromRoom(room string) error {
+	entity := entities.Messages{}
+
+	query := database.DB.Where("room = ?", room).Delete(&entity)
+	if query.Error != nil {
+		return query.Error
+	}
+
+	return nil
 }
 
 func NewMessagesRepository() repository_interfaces.IMessagesRepository {

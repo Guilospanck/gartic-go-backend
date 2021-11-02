@@ -7,6 +7,10 @@ import (
 	"net/http"
 	"time"
 
+	"base/src/business/dtos"
+
+	usecases_interfaces "base/src/business/usecases"
+
 	"github.com/gorilla/websocket"
 )
 
@@ -28,14 +32,19 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool { return true },
 }
 
-type WebSocketServer struct {
+type IWebSocketServer interface {
+	WsHandler(hub *ConnHub, w http.ResponseWriter, r *http.Request)
+}
+
+type webSocketServer struct {
+	usecases usecases_interfaces.IMessagesUseCases
 }
 
 type JsonData struct {
 	Username          string `json:"username"`
 	Room              string `json:"room"`
 	Message           string `json:"message"`
-	Timestamp         string `json:"timestamp"`
+	Date              string `json:"date"`
 	Close             bool   `json:"close"`
 	CanvasCoordinates string `json:"canvasCoordinates"`
 }
@@ -53,9 +62,7 @@ type RoomAndParticipants struct {
 	Participants []string `json:"participants"`
 }
 
-func (client *Client) sendDataToWaitingRoom() {
-	fmt.Println("Sending to waiting room...")
-
+func (client *Client) getAllParticipantsFromRooms() []RoomAndParticipants {
 	roomsWithParticipants := []RoomAndParticipants{}
 
 	for key, value := range client.Hub.clients {
@@ -70,15 +77,56 @@ func (client *Client) sendDataToWaitingRoom() {
 		}
 		roomsWithParticipants = append(roomsWithParticipants, temp)
 	}
+
+	return roomsWithParticipants
+}
+
+func (client *Client) verifyHowManyParticipantsAreInTheRoom(room string) int {
+	roomsWithParticipants := client.getAllParticipantsFromRooms()
+
+	var numOfParticipants int
+
+	for _, object := range roomsWithParticipants {
+		if object.Room == room {
+			numOfParticipants = len(object.Participants)
+			break
+		}
+	}
+
+	return numOfParticipants
+}
+
+func (client *Client) sendDataToWaitingRoom() {
+	fmt.Println("Sending to waiting room...")
+
+	roomsWithParticipants := client.getAllParticipantsFromRooms()
+
 	client.Hub.sendToWaitingRoom <- roomsWithParticipants
 }
 
-func (c *Client) ReadPump() {
+func (client *Client) sendAllMessagesFromRoom(messageUsecase usecases_interfaces.IMessagesUseCases) {
+	result, err := messageUsecase.GetMessagesByRoom(client.Room)
+	if err != nil {
+		return
+	}
+
+	client.Send <- result
+
+}
+
+func (c *Client) ReadPump(messageUsecase usecases_interfaces.IMessagesUseCases) {
 	fmt.Println("listening...")
 
 	// schedule client to be disconnected
 	defer func() {
 		fmt.Println("Read Pump: defer func")
+
+		// Delete messages of the room from database if this is the last participant
+		numOfParticipants := c.verifyHowManyParticipantsAreInTheRoom(c.Room)
+		if numOfParticipants == 1 {
+			messageUsecase.DeleteAllMessagesFromRoom(c.Room)
+		}
+
 		c.Hub.unregister <- c
 		c.Conn.Close()
 	}()
@@ -108,21 +156,37 @@ func (c *Client) ReadPump() {
 			return
 		}
 
+		// Save message to database
+		messageDB := dtos.CreateMessageDTO{
+			Username: message.Username,
+			Message:  message.Message,
+			Room:     message.Room,
+			Date:     message.Date,
+		}
+		_, err := messageUsecase.CreateMessage(messageDB)
+		if err == nil {
+			fmt.Println("Saved to database")
+		}
+
 		// queue messge for writing
 		c.Hub.send <- message
 	}
 }
 
-func (c *Client) WritePump() {
+func (c *Client) WritePump(messageUsecase usecases_interfaces.IMessagesUseCases) {
 	fmt.Println("writing...")
 
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
+		c.sendDataToWaitingRoom()
 		c.Conn.Close()
 	}()
 
 	c.sendDataToWaitingRoom()
+	if c.Room != "waitingroomgarticlikeapp" {
+		c.sendAllMessagesFromRoom(messageUsecase)
+	}
 
 	for {
 		select {
@@ -165,7 +229,7 @@ func (c *Client) WritePump() {
 	}
 }
 
-func (ws WebSocketServer) WsHandler(hub *ConnHub, w http.ResponseWriter, r *http.Request) {
+func (ws webSocketServer) WsHandler(hub *ConnHub, w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		http.Error(w, "Could not open websocket connection", http.StatusBadRequest)
@@ -187,10 +251,12 @@ func (ws WebSocketServer) WsHandler(hub *ConnHub, w http.ResponseWriter, r *http
 
 	client.Hub.register <- client
 
-	go client.WritePump()
-	go client.ReadPump()
+	go client.WritePump(ws.usecases)
+	go client.ReadPump(ws.usecases)
 }
 
-func NewWebSocketServer() *WebSocketServer {
-	return &WebSocketServer{}
+func NewWebSocketServer(messagesUsecase usecases_interfaces.IMessagesUseCases) IWebSocketServer {
+	return &webSocketServer{
+		usecases: messagesUsecase,
+	}
 }
