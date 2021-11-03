@@ -155,19 +155,18 @@ func (c *Client) ReadPump(messageUsecase usecases_interfaces.IMessagesUseCases) 
 			return
 		}
 
-		// Save message to database if is not "sending canvas "
+		// Save message to database
 		messageDB := dtos.CreateMessageDTO{
-			Username: message.Username,
-			Message:  message.Message,
-			Room:     message.Room,
-			Date:     message.Date,
+			Username:          message.Username,
+			Message:           message.Message,
+			Room:              message.Room,
+			Date:              message.Date,
+			CanvasCoordinates: message.CanvasCoordinates,
 		}
 
-		if message.CanvasCoordinates == "" {
-			_, err := messageUsecase.CreateMessage(messageDB)
-			if err == nil {
-				fmt.Println("Saved to database")
-			}
+		_, err := messageUsecase.CreateMessage(messageDB)
+		if err == nil {
+			fmt.Println("Saved to database")
 		}
 
 		// queue messge for writing

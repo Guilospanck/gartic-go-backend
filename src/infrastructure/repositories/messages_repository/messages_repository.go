@@ -11,10 +11,11 @@ type MessagesRepository struct{}
 
 func (MessagesRepository) Create(message dtos.CreateMessageDTO) (entities.Messages, error) {
 	result := entities.Messages{
-		Username: message.Username,
-		Message:  message.Message,
-		Room:     message.Room,
-		Date:     message.Date,
+		Username:          message.Username,
+		Message:           message.Message,
+		Room:              message.Room,
+		Date:              message.Date,
+		CanvasCoordinates: message.CanvasCoordinates,
 	}
 
 	if err := database.DB.Model(entities.Messages{}).Create(&result).Error; err != nil {
