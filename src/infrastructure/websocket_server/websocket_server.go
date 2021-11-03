@@ -111,7 +111,6 @@ func (client *Client) sendAllMessagesFromRoom(messageUsecase usecases_interfaces
 	}
 
 	client.Send <- result
-
 }
 
 func (c *Client) ReadPump(messageUsecase usecases_interfaces.IMessagesUseCases) {
@@ -156,16 +155,19 @@ func (c *Client) ReadPump(messageUsecase usecases_interfaces.IMessagesUseCases) 
 			return
 		}
 
-		// Save message to database
+		// Save message to database if is not "sending canvas "
 		messageDB := dtos.CreateMessageDTO{
 			Username: message.Username,
 			Message:  message.Message,
 			Room:     message.Room,
 			Date:     message.Date,
 		}
-		_, err := messageUsecase.CreateMessage(messageDB)
-		if err == nil {
-			fmt.Println("Saved to database")
+
+		if message.CanvasCoordinates == "" {
+			_, err := messageUsecase.CreateMessage(messageDB)
+			if err == nil {
+				fmt.Println("Saved to database")
+			}
 		}
 
 		// queue messge for writing
@@ -207,13 +209,6 @@ func (c *Client) WritePump(messageUsecase usecases_interfaces.IMessagesUseCases)
 			messageJson, _ := json.Marshal(message)
 			fmt.Println("Sent")
 			w.Write(messageJson)
-
-			// Add queued chat messages to the current websocket message.
-			// n := len(c.Send)
-			// for i := 0; i < n; i++ {
-			// 	messageJson, _ := json.Marshal(<-c.Send)
-			// 	w.Write(messageJson)
-			// }
 
 			if err := w.Close(); err != nil {
 				return
