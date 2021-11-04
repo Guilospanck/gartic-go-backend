@@ -47,6 +47,7 @@ type JsonData struct {
 	Date              string `json:"date"`
 	Close             bool   `json:"close"`
 	CanvasCoordinates string `json:"canvasCoordinates"`
+	CanvasConfigs     string `json:"canvasConfigs"`
 }
 
 type Client struct {
@@ -162,6 +163,7 @@ func (c *Client) ReadPump(messageUsecase usecases_interfaces.IMessagesUseCases) 
 			Room:              message.Room,
 			Date:              message.Date,
 			CanvasCoordinates: message.CanvasCoordinates,
+			CanvasConfigs:     message.CanvasConfigs,
 		}
 
 		_, err := messageUsecase.CreateMessage(messageDB)

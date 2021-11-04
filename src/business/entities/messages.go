@@ -13,6 +13,7 @@ type Messages struct {
 	Room              string         `json:"room"`
 	Date              string         `json:"date"`
 	CanvasCoordinates string         `json:"canvasCoordinates"`
+	CanvasConfigs     string         `json:"canvasConfigs"`
 	CreatedAt         time.Time      `json:"createdAt"`
 	UpdatedAt         time.Time      `json:"updatedAt"`
 	DeletedAt         gorm.DeletedAt `gorm:"index" json:"deletedAt"`

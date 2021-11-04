@@ -16,6 +16,7 @@ func (MessagesRepository) Create(message dtos.CreateMessageDTO) (entities.Messag
 		Room:              message.Room,
 		Date:              message.Date,
 		CanvasCoordinates: message.CanvasCoordinates,
+		CanvasConfigs:     message.CanvasConfigs,
 	}
 
 	if err := database.DB.Model(entities.Messages{}).Create(&result).Error; err != nil {

@@ -6,4 +6,5 @@ type CreateMessageDTO struct {
 	Room              string `json:"room"`
 	Date              string `json:"date"`
 	CanvasCoordinates string `json:"canvasCoordinates"`
+	CanvasConfigs     string `json:"canvasConfigs"`
 }
