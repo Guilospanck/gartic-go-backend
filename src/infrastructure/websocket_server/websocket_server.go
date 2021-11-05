@@ -63,6 +63,22 @@ type RoomAndParticipants struct {
 	Participants []string `json:"participants"`
 }
 
+func (client *Client) getParticipantsFromRoom(room string) RoomAndParticipants {
+	participants := client.Hub.clients[room]
+
+	participantsString := []string{}
+	for _, v := range participants {
+		participantsString = append(participantsString, v.Username)
+	}
+
+	roomsWithParticipants := RoomAndParticipants{
+		Room:         room,
+		Participants: participantsString,
+	}
+
+	return roomsWithParticipants
+}
+
 func (client *Client) getAllParticipantsFromRooms() []RoomAndParticipants {
 	roomsWithParticipants := []RoomAndParticipants{}
 
@@ -112,6 +128,14 @@ func (client *Client) sendAllMessagesFromRoom(messageUsecase usecases_interfaces
 	}
 
 	client.Send <- result
+}
+
+func (client *Client) broadcastToParticipantsInRoom() {
+	fmt.Printf("Broadcasting to room %s\n", client.Room)
+
+	roomWithParticipants := client.getParticipantsFromRoom(client.Room)
+
+	client.Hub.broadcastToParticipantsInRoom <- roomWithParticipants
 }
 
 func (c *Client) ReadPump(messageUsecase usecases_interfaces.IMessagesUseCases) {
@@ -183,11 +207,13 @@ func (c *Client) WritePump(messageUsecase usecases_interfaces.IMessagesUseCases)
 	defer func() {
 		ticker.Stop()
 		c.sendDataToWaitingRoom()
+		c.broadcastToParticipantsInRoom()
 		c.Conn.Close()
 	}()
 
 	c.sendDataToWaitingRoom()
 	if c.Room != "waitingroomgarticlikeapp" {
+		c.broadcastToParticipantsInRoom()
 		c.sendAllMessagesFromRoom(messageUsecase)
 	}
 
