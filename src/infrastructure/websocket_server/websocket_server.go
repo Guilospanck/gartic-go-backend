@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
 	"time"
 
@@ -28,7 +29,7 @@ const (
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
-	// needed to allow connections from any origin for :3000 -> :5555
+	// needed to allow connections from any origin for :3333 -> :5555
 	CheckOrigin: func(r *http.Request) bool { return true },
 }
 
@@ -61,6 +62,13 @@ type Client struct {
 type RoomAndParticipants struct {
 	Room         string   `json:"room"`
 	Participants []string `json:"participants"`
+}
+
+type ParticipantsTurn struct {
+	Username  string   `json:"username"`
+	Room      string   `json:"room"`
+	Hub       *ConnHub `json:"hub"`
+	Timestamp int64    `json:"timestamp"`
 }
 
 func (client *Client) getParticipantsFromRoom(room string) RoomAndParticipants {
@@ -138,6 +146,23 @@ func (client *Client) broadcastToParticipantsInRoom() {
 	client.Hub.broadcastToParticipantsInRoom <- roomWithParticipants
 }
 
+func (client *Client) getRandomParticipant() ParticipantsTurn {
+	clients := client.Hub.clients[client.Room]
+	randomIndex := rand.Intn(len(clients))
+
+	randomClient := clients[randomIndex]
+	timestamp := time.Now().Unix()
+
+	response := ParticipantsTurn{
+		Username:  randomClient.Username,
+		Room:      randomClient.Room,
+		Hub:       randomClient.Hub,
+		Timestamp: timestamp,
+	}
+
+	return response
+}
+
 func (c *Client) ReadPump(messageUsecase usecases_interfaces.IMessagesUseCases) {
 	fmt.Println("listening...")
 
@@ -204,6 +229,8 @@ func (c *Client) WritePump(messageUsecase usecases_interfaces.IMessagesUseCases)
 	fmt.Println("writing...")
 
 	ticker := time.NewTicker(pingPeriod)
+	sendParticipantsTurn := time.NewTicker(20 * time.Second)
+
 	defer func() {
 		ticker.Stop()
 		c.sendDataToWaitingRoom()
@@ -235,6 +262,7 @@ func (c *Client) WritePump(messageUsecase usecases_interfaces.IMessagesUseCases)
 
 			messageJson, _ := json.Marshal(message)
 			fmt.Println("Sent")
+			fmt.Println(messageJson)
 			w.Write(messageJson)
 
 			if err := w.Close(); err != nil {
@@ -247,6 +275,17 @@ func (c *Client) WritePump(messageUsecase usecases_interfaces.IMessagesUseCases)
 			if err := c.Conn.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
 				return
 			}
+
+		// send participant's turn
+		case <-sendParticipantsTurn.C:
+			client := c.getRandomParticipant()
+			client.Hub.broadcastParticipantTurn <- client
+
+			// c.Conn.SetWriteDeadline(time.Now().Add(writeWait))
+			// if err := c.Conn.WriteMessage(websocket.TextMessage, []byte(clientJson)); err != nil {
+			// 	return
+			// }
+
 		}
 	}
 }

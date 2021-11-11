@@ -7,6 +7,7 @@ type ConnHub struct {
 	unregister                    chan *Client
 	sendToWaitingRoom             chan []RoomAndParticipants
 	broadcastToParticipantsInRoom chan RoomAndParticipants
+	broadcastParticipantTurn      chan ParticipantsTurn
 }
 
 func (hub *ConnHub) removeClientFromRoomList(room string, client *Client) {
@@ -96,6 +97,19 @@ func (hub *ConnHub) Run() {
 				}
 			}
 
+		case message := <-hub.broadcastParticipantTurn:
+			id := message.Room
+			for range hub.clients {
+				if clients, ok := hub.clients[id]; ok {
+					for _, client := range clients {
+						select {
+						case client.Send <- message:
+						default:
+						}
+					}
+				}
+			}
+
 		}
 	}
 
@@ -109,5 +123,6 @@ func NewConnHub() *ConnHub {
 		unregister:                    make(chan *Client),
 		sendToWaitingRoom:             make(chan []RoomAndParticipants),
 		broadcastToParticipantsInRoom: make(chan RoomAndParticipants),
+		broadcastParticipantTurn:      make(chan ParticipantsTurn),
 	}
 }
