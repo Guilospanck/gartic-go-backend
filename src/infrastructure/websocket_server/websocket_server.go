@@ -244,6 +244,7 @@ func (c *Client) WritePump(messageUsecase usecases_interfaces.IMessagesUseCases,
 	}()
 
 	c.sendDataToWaitingRoom()
+
 	if c.Room != "waitingroomgarticlikeapp" {
 		c.broadcastToParticipantsInRoom()
 		c.sendAllMessagesFromRoom(messageUsecase)
@@ -283,19 +284,15 @@ func (c *Client) WritePump(messageUsecase usecases_interfaces.IMessagesUseCases,
 
 		// send participant's turn
 		case <-sendParticipantsTurn.C:
-
-			numberOfParticipants := len(c.Hub.clients[c.Room])
-
-			client := c.getRandomParticipant()
-			if numberOfParticipants > 1 {
-				for client.Username == c.Username {
-					client = c.getRandomParticipant()
-				}
+			if c.Room == "waitingroomgarticlikeapp" {
+				break
 			}
 
-			drawer, err := drawerUsecase.GetDrawerByRoom(client.Room)
+			drawer, err := drawerUsecase.GetDrawerByRoom(c.Room)
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				fmt.Println("error record not found")
+
+				client := c.getRandomParticipant()
 
 				newDrawer := dtos.CreateDrawerDTO{
 					Username: client.Username,
@@ -303,10 +300,11 @@ func (c *Client) WritePump(messageUsecase usecases_interfaces.IMessagesUseCases,
 				}
 				drawerUsecase.CreateDrawer(newDrawer)
 
-				client.Hub.broadcastParticipantTurn <- client
+				c.Hub.broadcastParticipantTurn <- client
 
-				return
+				break
 			}
+
 			if err != nil {
 				fmt.Println("error trying to get drawer by room")
 			}
@@ -315,18 +313,28 @@ func (c *Client) WritePump(messageUsecase usecases_interfaces.IMessagesUseCases,
 			now := time.Now()
 			timePassed := now.Sub(drawerTimestamp)
 
-			if timePassed.Seconds() < float64(drawersTimer) {
-				return
+			if timePassed.Seconds() < float64(drawersTimer.Seconds()-1) {
+				fmt.Printf("timepassed seconds: %f\n", timePassed.Seconds())
+				fmt.Printf("drawers time: %f\n", float64(drawersTimer.Seconds()))
+				break
 			}
 
-			drawerUsecase.DeleteAllDrawersFromRoom(client.Room)
+			numberOfParticipants := len(c.Hub.clients[c.Room])
+			client := c.getRandomParticipant()
+			if numberOfParticipants > 1 {
+				for client.Username == drawer.Username {
+					client = c.getRandomParticipant()
+				}
+			}
+
+			drawerUsecase.DeleteAllDrawersFromRoom(c.Room)
 			newDrawer := dtos.CreateDrawerDTO{
 				Username: client.Username,
 				Room:     client.Room,
 			}
 			drawerUsecase.CreateDrawer(newDrawer)
 
-			client.Hub.broadcastParticipantTurn <- client
+			c.Hub.broadcastParticipantTurn <- client
 		}
 	}
 }

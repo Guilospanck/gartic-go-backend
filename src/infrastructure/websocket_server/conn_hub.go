@@ -99,13 +99,11 @@ func (hub *ConnHub) Run() {
 
 		case message := <-hub.broadcastParticipantTurn:
 			id := message.Room
-			for range hub.clients {
-				if clients, ok := hub.clients[id]; ok {
-					for _, client := range clients {
-						select {
-						case client.Send <- message:
-						default:
-						}
+			if clients, ok := hub.clients[id]; ok {
+				for _, client := range clients {
+					select {
+					case client.Send <- message:
+					default:
 					}
 				}
 			}
