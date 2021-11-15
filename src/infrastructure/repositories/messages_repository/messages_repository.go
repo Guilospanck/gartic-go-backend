@@ -1,4 +1,4 @@
-package repositories
+package messages_repositories
 
 import (
 	repository_interfaces "base/src/applications/interfaces"

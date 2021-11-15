@@ -2,6 +2,7 @@ package websocketserver
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"math/rand"
@@ -9,10 +10,10 @@ import (
 	"time"
 
 	"base/src/business/dtos"
-
 	usecases_interfaces "base/src/business/usecases"
 
 	"github.com/gorilla/websocket"
+	"gorm.io/gorm"
 )
 
 const (
@@ -23,7 +24,10 @@ const (
 	// Send pings to peer with this period. Must be less than pongWait
 	pingPeriod = (pongWait * 9) / 10
 	// maximum message size allowed from peer
-	maxMessageSize = 512
+	// maxMessageSize = 512
+
+	// time to change drawer's turn
+	drawersTimer = 20 * time.Second
 )
 
 var upgrader = websocket.Upgrader{
@@ -38,7 +42,8 @@ type IWebSocketServer interface {
 }
 
 type webSocketServer struct {
-	usecases usecases_interfaces.IMessagesUseCases
+	messagesUseCases usecases_interfaces.IMessagesUseCases
+	drawerUseCases   usecases_interfaces.IDrawersUseCases
 }
 
 type JsonData struct {
@@ -225,11 +230,11 @@ func (c *Client) ReadPump(messageUsecase usecases_interfaces.IMessagesUseCases) 
 	}
 }
 
-func (c *Client) WritePump(messageUsecase usecases_interfaces.IMessagesUseCases) {
+func (c *Client) WritePump(messageUsecase usecases_interfaces.IMessagesUseCases, drawerUsecase usecases_interfaces.IDrawersUseCases) {
 	fmt.Println("writing...")
 
 	ticker := time.NewTicker(pingPeriod)
-	sendParticipantsTurn := time.NewTicker(20 * time.Second)
+	sendParticipantsTurn := time.NewTicker(drawersTimer)
 
 	defer func() {
 		ticker.Stop()
@@ -278,14 +283,50 @@ func (c *Client) WritePump(messageUsecase usecases_interfaces.IMessagesUseCases)
 
 		// send participant's turn
 		case <-sendParticipantsTurn.C:
+
+			numberOfParticipants := len(c.Hub.clients[c.Room])
+
 			client := c.getRandomParticipant()
+			if numberOfParticipants > 1 {
+				for client.Username == c.Username {
+					client = c.getRandomParticipant()
+				}
+			}
+
+			drawer, err := drawerUsecase.GetDrawerByRoom(client.Room)
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				fmt.Println("error record not found")
+
+				newDrawer := dtos.CreateDrawerDTO{
+					Username: client.Username,
+					Room:     client.Room,
+				}
+				drawerUsecase.CreateDrawer(newDrawer)
+
+				client.Hub.broadcastParticipantTurn <- client
+
+				return
+			}
+			if err != nil {
+				fmt.Println("error trying to get drawer by room")
+			}
+
+			drawerTimestamp := drawer.CreatedAt
+			now := time.Now()
+			timePassed := now.Sub(drawerTimestamp)
+
+			if timePassed.Seconds() < float64(drawersTimer) {
+				return
+			}
+
+			drawerUsecase.DeleteAllDrawersFromRoom(client.Room)
+			newDrawer := dtos.CreateDrawerDTO{
+				Username: client.Username,
+				Room:     client.Room,
+			}
+			drawerUsecase.CreateDrawer(newDrawer)
+
 			client.Hub.broadcastParticipantTurn <- client
-
-			// c.Conn.SetWriteDeadline(time.Now().Add(writeWait))
-			// if err := c.Conn.WriteMessage(websocket.TextMessage, []byte(clientJson)); err != nil {
-			// 	return
-			// }
-
 		}
 	}
 }
@@ -312,12 +353,14 @@ func (ws webSocketServer) WsHandler(hub *ConnHub, w http.ResponseWriter, r *http
 
 	client.Hub.register <- client
 
-	go client.WritePump(ws.usecases)
-	go client.ReadPump(ws.usecases)
+	go client.WritePump(ws.messagesUseCases, ws.drawerUseCases)
+	go client.ReadPump(ws.messagesUseCases)
 }
 
-func NewWebSocketServer(messagesUsecase usecases_interfaces.IMessagesUseCases) IWebSocketServer {
+func NewWebSocketServer(messagesUsecase usecases_interfaces.IMessagesUseCases,
+	drawersUsecase usecases_interfaces.IDrawersUseCases) IWebSocketServer {
 	return &webSocketServer{
-		usecases: messagesUsecase,
+		messagesUseCases: messagesUsecase,
+		drawerUseCases:   drawersUsecase,
 	}
 }

@@ -17,6 +17,17 @@ func createTableMessages(db *gorm.DB) {
 	fmt.Printf("Migration of Messages completed.\n\n")
 }
 
+func createTableDrawers(db *gorm.DB) {
+	err := db.AutoMigrate(entities.Drawers{})
+	if err != nil {
+		fmt.Println(err)
+		panic("error trying to migrate drawers schema")
+	}
+
+	fmt.Println("Migration of Drawers completed.")
+}
+
 func MigrateAllTables(db *gorm.DB) {
 	createTableMessages(db)
+	createTableDrawers(db)
 }

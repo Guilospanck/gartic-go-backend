@@ -1,10 +1,12 @@
 package main
 
 import (
+	drawers_usecases "base/src/applications/usecases/drawers"
 	messages_usecases "base/src/applications/usecases/messages"
 	_ "base/src/infrastructure/database"
 	httpserver "base/src/infrastructure/http_server"
-	repositories "base/src/infrastructure/repositories/messages_repository"
+	drawers_repositories "base/src/infrastructure/repositories/drawers_repository"
+	messages_repositories "base/src/infrastructure/repositories/messages_repository"
 	websocketserver "base/src/infrastructure/websocket_server"
 	"log"
 	"net/http"
@@ -25,10 +27,12 @@ func (appModule *AppModule) InitServer() {
 	go hub.Run()
 
 	// Websocket Server (and its own http server)
-	messagesRepository := repositories.NewMessagesRepository()
+	messagesRepository := messages_repositories.NewMessagesRepository()
 	messagesUseCases := messages_usecases.NewMessageUseCase(messagesRepository)
+	drawersRepository := drawers_repositories.NewDrawersRepository()
+	drawerUseCases := drawers_usecases.NewDrawersUseCase(drawersRepository)
 
-	webSocketServer := websocketserver.NewWebSocketServer(messagesUseCases)
+	webSocketServer := websocketserver.NewWebSocketServer(messagesUseCases, drawerUseCases)
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		webSocketServer.WsHandler(hub, w, r)
 	})
