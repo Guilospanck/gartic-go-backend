@@ -2,11 +2,11 @@
 This is the backend application of the Gartic-like application. The frontend can be found at [Gartic-Like-App](https://github.com/Guilospanck/gartic-like-app/)
 
 ## Installation
-### Install Go
+### Go
 You can find a tutorial at [Digital Ocean - Go Ubuntu 20.04](https://www.digitalocean.com/community/tutorials/how-to-install-go-on-ubuntu-20-04)
 
 ### Database
-We're using Postgres as database for this project. Therefore, in order to run the application, you must have it up and running before.
+We're using Postgresql as database for this project. Therefore, in order to run the application, you must have it up and running before.
 The quicker and most practical way is by using Docker.
 
 After having Docker installed, run
