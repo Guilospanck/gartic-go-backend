@@ -8,14 +8,12 @@ ENV GO111MODULE=on \
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN go build --ldflags "-s -w" -o exec main.go
+RUN go build --ldflags "-s -w" -o ./exec .
 
 FROM scratch
 
 WORKDIR /app
-USER app
 COPY --from=build ./build/exec ./
-COPY ./.env.* ./
 EXPOSE 8000
 EXPOSE 5555
 
