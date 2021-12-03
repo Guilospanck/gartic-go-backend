@@ -3,6 +3,8 @@ package environments
 import "os"
 
 func initializeDevEnvironmentVariables() {
+	os.Setenv("PORT", "8000")
+
 	// Database
 	os.Setenv("DB_HOST", "127.0.0.1")
 	os.Setenv("DB_PORT", "5432")
@@ -17,6 +19,8 @@ func initializeStagingEnvironmentVariables() {
 }
 
 func initializeProductionEnvironmentVariables() {
+	os.Setenv("PORT", "8000")
+
 	// Database
 	os.Setenv("DB_HOST", "postgres")
 	os.Setenv("DB_PORT", "5432")

@@ -10,13 +10,17 @@ import (
 	websocketserver "base/src/infrastructure/websocket_server"
 	"log"
 	"net/http"
+	"os"
+	"strconv"
 )
 
 type AppModule struct{}
 
 func (appModule *AppModule) InitServer() {
+	port, _ := strconv.Atoi(os.Getenv("PORT"))
+
 	// HTTP SERVER
-	httpServer := httpserver.NewHttpServer()
+	httpServer := httpserver.NewHttpServer(port)
 	httpServer.Init()
 	httpServer.RegisterRoutes(Routes())
 	go httpServer.Listen()

@@ -9,12 +9,12 @@ import (
 
 type HttpServer struct {
 	server *http.Server
-	port   uint
+	port   int
 }
 
 func (hs *HttpServer) Init() {
 	hs.server = &http.Server{
-		Addr:         fmt.Sprintf("localhost:%d", hs.port),
+		Addr:         fmt.Sprintf(":%d", hs.port),
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
@@ -28,11 +28,11 @@ func (hs *HttpServer) Listen() {
 	log.Fatal(hs.server.ListenAndServe())
 }
 
-func NewHttpServer(port ...uint) *HttpServer {
+func NewHttpServer(port ...int) *HttpServer {
 	/* A way of adding optional parameters. See: https://stackoverflow.com/a/19813113/9782182 */
 	defaultPort := 8000
 	if len(port) == 0 {
-		port = append(port, uint(defaultPort))
+		port = append(port, int(defaultPort))
 	}
 
 	return &HttpServer{
