@@ -2,6 +2,10 @@
 This is the backend application of the Gartic-like application. The frontend can be found at [Gartic-Like-App](https://github.com/Guilospanck/gartic-like-app/)
 
 ## Installation
+
+### Using Docker-Compose
+You can follow the README from the [PKG Gartic Deploy](https://github.com/Guilospanck/pkg-gartic-deploy) that uses Docker-Compose to build the whole application. If you don't want to use Docker-Compose, follow the next instructions.
+
 ### Go
 You can find a tutorial at [Digital Ocean - Go Ubuntu 20.04](https://www.digitalocean.com/community/tutorials/how-to-install-go-on-ubuntu-20-04)
 
